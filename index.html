@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Video Studio</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e0245e">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f6f5f2;--card:#fff;--tx:#1c1b19;--mu:#6b6a66;--ac:#e0245e;--bd:#e3e1dc}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#141413;--card:#1f1e1d;--tx:#f1efe9;--mu:#a09e97;--bd:#33312e}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#141413;--card:#1f1e1d;--tx:#f1efe9;--mu:#a09e97;--bd:#33312e}
+*{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Noto Sans Myanmar","Myanmar Text",sans-serif;line-height:1.6}
+main{max-width:520px;margin:0 auto;padding:14px}
+h1{font-size:20px;margin:0 0 10px;outline:none}
+h1:focus{border-bottom:2px dashed var(--ac)}
+.stage{background:#000;border-radius:14px;overflow:hidden;display:flex;justify-content:center}
+canvas{width:auto;max-width:100%;max-height:52vh;aspect-ratio:9/16;display:block}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px 14px;margin-top:12px}
+.card h2{font-size:15px;margin:0 0 6px}
+label{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mu)}
+label span{width:92px;flex:none}label b{width:40px;text-align:right;color:var(--tx);font-weight:500;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--ac)}
+button,.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;cursor:pointer;display:inline-block}
+button.g{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.row>*{flex:1}
+input[type=file]{display:none}
+#out video{width:100%;max-height:60vh;border-radius:12px;margin-top:8px;background:#000}
+.hint{font-size:13px;color:var(--mu);margin:6px 0 0}
+</style>
+</head>
+<body>
+<main>
+<h1 id="name" contenteditable="true" spellcheck="false">My Video Studio</h1>
+<p class="hint" style="margin:-6px 0 10px">↑ နာမည်ကို နှိပ်ပြီး ကိုယ်ပိုင်နာမည် ပြောင်းနိုင်ပါတယ်</p>
+
+<div class="stage"><canvas id="cv" width="540" height="960"></canvas></div>
+
+<div class="row">
+<label class="btn" for="file">📁 ဗီဒီယို ရွေးမည်</label>
+<input id="file" type="file" accept="video/*">
+<button class="g" id="play">▶ ဖွင့်/ရပ်</button>
+</div>
+
+<div class="card"><h2>🎬 မြင်ကွင်း</h2>
+<label><span>ချဲ့/ချုံ့</span><input type="range" id="zoom" min="0.5" max="3" step="0.01" value="1"><b></b></label>
+<label><span>ဘယ်-ညာ</span><input type="range" id="px" min="-50" max="50" step="1" value="0"><b></b></label>
+<label><span>အပေါ်-အောက်</span><input type="range" id="py" min="-50" max="50" step="1" value="0"><b></b></label>
+</div>
+
+<div class="card"><h2>🎨 အရောင်</h2>
+<label><span>အလင်း</span><input type="range" id="br" min="50" max="150" value="100"><b></b></label>
+<label><span>Contrast</span><input type="range" id="ct" min="50" max="150" value="100"><b></b></label>
+<label><span>အရောင်ရင့်</span><input type="range" id="sa" min="0" max="200" value="100"><b></b></label>
+<label><span>နွေးထွေး</span><input type="range" id="wm" min="0" max="60" value="0"><b></b></label>
+<label><span>Hue</span><input type="range" id="hu" min="-180" max="180" value="0"><b></b></label>
+</div>
+
+<div class="card"><h2>🔊 အသံ</h2>
+<label><span>အသံပမာဏ</span><input type="range" id="vol" min="0" max="200" value="100"><b></b></label>
+<label><span>Bass</span><input type="range" id="bass" min="-12" max="12" value="0"><b></b></label>
+<label><span>Treble</span><input type="range" id="treb" min="-12" max="12" value="0"><b></b></label>
+<label><span>အသံပြတ်သား</span><input type="range" id="clar" min="0" max="10" value="0"><b></b></label>
+<label><span>အသံညီ</span><input type="checkbox" id="comp"> <small>Compressor (အသံကျယ်/ခပ်ကျဲ ညှိပေး)</small></label>
+</div>
+
+<div class="row"><button id="exp">⏺ ထုတ်မည် (Export)</button></div>
+<p class="hint" id="st"></p>
+<div id="out"></div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+const v=document.createElement('video');v.playsInline=true;v.crossOrigin='anonymous';
+let ac,srcN,gain,lo,hi,pk,hp,cmp,dest,exporting=false;
+
+try{const n=localStorage.getItem('vs-name');if(n)$('name').textContent=n}catch(e){}
+$('name').addEventListener('input',()=>{try{localStorage.setItem('vs-name',$('name').textContent)}catch(e){}document.title=$('name').textContent});
+
+const sl=document.querySelectorAll('input[type=range]');
+sl.forEach(s=>{const b=s.parentNode.querySelector('b');const u=()=>{b.textContent=s.value;applyAudio()};s.addEventListener('input',u);b.textContent=s.value});
+$('comp').addEventListener('change',applyAudio);
+
+function initAudio(){
+  if(ac)return;
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  srcN=ac.createMediaElementSource(v);
+  hp=ac.createBiquadFilter();hp.type='highpass';hp.frequency.value=20;
+  lo=ac.createBiquadFilter();lo.type='lowshelf';lo.frequency.value=200;
+  hi=ac.createBiquadFilter();hi.type='highshelf';hi.frequency.value=4000;
+  pk=ac.createBiquadFilter();pk.type='peaking';pk.frequency.value=3000;pk.Q.value=1;
+  cmp=ac.createDynamicsCompressor();
+  gain=ac.createGain();dest=ac.createMediaStreamDestination();
+  srcN.connect(hp);hp.connect(lo);lo.connect(pk);pk.connect(hi);hi.connect(cmp);cmp.connect(gain);
+  gain.connect(ac.destination);gain.connect(dest);
+  applyAudio();
+}
+function applyAudio(){
+  if(!ac)return;
+  gain.gain.value=$('vol').value/100;
+  lo.gain.value=+$('bass').value;hi.gain.value=+$('treb').value;
+  const c=+$('clar').value;pk.gain.value=c;hp.frequency.value=c?90:20;
+  if($('comp').checked){cmp.threshold.value=-30;cmp.ratio.value=6;cmp.knee.value=10}
+  else{cmp.threshold.value=0;cmp.ratio.value=1}
+}
+
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  v.src=URL.createObjectURL(f);v.load();
+  v.onloadeddata=()=>{v.currentTime=0.05;$('st').textContent='ဗီဒီယို ထည့်ပြီးပါပြီ ✓'};
+});
+$('play').onclick=()=>{initAudio();ac.resume();v.paused?v.play():v.pause()};
+
+function draw(){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(v.videoWidth){
+    const z=+$('zoom').value,s=Math.max(W/v.videoWidth,H/v.videoHeight)*z;
+    const w=v.videoWidth*s,h=v.videoHeight*s;
+    const x=(W-w)/2+(+$('px').value/100)*W,y=(H-h)/2+(+$('py').value/100)*H;
+    ctx.filter=`brightness(${$('br').value}%) contrast(${$('ct').value}%) saturate(${$('sa').value}%) hue-rotate(${$('hu').value}deg) sepia(${$('wm').value}%)`;
+    ctx.drawImage(v,x,y,w,h);ctx.filter='none';
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+
+$('exp').onclick=()=>{
+  if(!v.videoWidth){$('st').textContent='ဗီဒီယို အရင်ရွေးပါ';return}
+  if(exporting)return;
+  if(!window.MediaRecorder){$('st').textContent='ဒီ browser မှာ export မရပါ (Chrome သုံးပါ)';return}
+  initAudio();ac.resume();
+  const stream=cv.captureStream(30);
+  dest.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+  const types=['video/mp4','video/webm;codecs=vp9,opus','video/webm'];
+  const mt=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  const rec=new MediaRecorder(stream,mt?{mimeType:mt,videoBitsPerSecond:6e6}:{});
+  const ch=[];rec.ondataavailable=e=>e.data.size&&ch.push(e.data);
+  rec.onstop=()=>{
+    exporting=false;v.pause();
+    const url=URL.createObjectURL(new Blob(ch,{type:rec.mimeType}));
+    $('out').innerHTML='<video controls playsinline src="'+url+'"></video>';
+    $('out').insertAdjacentHTML('beforeend','<div class="row"><a class="btn" download="video.'+(rec.mimeType.includes('mp4')?'mp4':'webm')+'" href="'+url+'">⬇ Download</a></div>');
+    $('st').textContent='ပြီးပါပြီ ✓ Download နှိပ်ပါ';
+  };
+  v.onended=()=>rec.state!=='inactive'&&rec.stop();
+  exporting=true;v.currentTime=0;
+  v.onseeked=()=>{v.onseeked=null;rec.start();v.play()};
+  $('st').textContent='ထုတ်နေပါတယ်... ဗီဒီယို ဆုံးတဲ့အထိ စောင့်ပါ ⏳';
+};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
