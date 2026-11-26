@@ -29,7 +29,7 @@ button,.btn{background:var(--ac);color:#fff;border:0;border-radius:10px;padding:
 button.g{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
 .row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
 .row>*{flex:1}
-input[type=file]{display:none}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
 #out video{width:100%;max-height:60vh;border-radius:12px;margin-top:8px;background:#000}
 .hint{font-size:13px;color:var(--mu);margin:6px 0 0}
 </style>
@@ -47,7 +47,7 @@ input[type=file]{display:none}
 <button class="g" id="play">▶ ဖွင့်/ရပ်</button>
 </div>
 
-<div class="card"><h2>🎬 မြင်ကွင်း</h2>
+<div class="card"><h2>🎬 မြင်ကွင်း <button class="g" id="rs" style="float:right;padding:4px 10px;font-size:13px">Reset</button></h2>
 <label><span>ချဲ့/ချုံ့</span><input type="range" id="zoom" min="0.5" max="3" step="0.01" value="1"><b></b></label>
 <label><span>ဘယ်-ညာ</span><input type="range" id="px" min="-50" max="50" step="1" value="0"><b></b></label>
 <label><span>အပေါ်-အောက်</span><input type="range" id="py" min="-50" max="50" step="1" value="0"><b></b></label>
@@ -76,7 +76,7 @@ input[type=file]{display:none}
 <script>
 const $=id=>document.getElementById(id);
 const cv=$('cv'),ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
-const v=document.createElement('video');v.playsInline=true;v.crossOrigin='anonymous';
+const v=document.createElement('video');v.playsInline=true;v.preload='auto';v.setAttribute('playsinline','');v.style.cssText='position:fixed;left:0;top:0;width:2px;height:2px;opacity:0.01;pointer-events:none';document.body.appendChild(v);
 let ac,srcN,gain,lo,hi,pk,hp,cmp,dest,exporting=false;
 
 try{const n=localStorage.getItem('vs-name');if(n)$('name').textContent=n}catch(e){}
@@ -111,8 +111,11 @@ function applyAudio(){
 
 $('file').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
+  $('st').textContent='ဗီဒီယို ဖတ်နေပါတယ်... ('+f.name+')';
+  v.onerror=()=>{$('st').textContent='ဒီဗီဒီယို ဖွင့်မရပါ။ တခြား ဗီဒီယိုတစ်ခု စမ်းပါ (MP4)'};
+  v.onloadedmetadata=()=>{$('st').textContent='ဗီဒီယို ထည့်ပြီးပါပြီ ✓ ('+v.videoWidth+'x'+v.videoHeight+')';v.currentTime=0.1};
   v.src=URL.createObjectURL(f);v.load();
-  v.onloadeddata=()=>{v.currentTime=0.05;$('st').textContent='ဗီဒီယို ထည့်ပြီးပါပြီ ✓'};
+  e.target.value='';
 });
 $('play').onclick=()=>{initAudio();ac.resume();v.paused?v.play():v.pause()};
 
@@ -152,6 +155,7 @@ $('exp').onclick=()=>{
   v.onseeked=()=>{v.onseeked=null;rec.start();v.play()};
   $('st').textContent='ထုတ်နေပါတယ်... ဗီဒီယို ဆုံးတဲ့အထိ စောင့်ပါ ⏳';
 };
+$('rs').onclick=()=>{$('zoom').value=1;$('px').value=0;$('py').value=0;sl.forEach(x=>x.dispatchEvent(new Event('input')))};
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
